@@ -1,6 +1,6 @@
 # CppUTest for the QP/C (qpc) Example Project, PwmService
 
-Build and Test status: ![Build and Tests](https://github.com/covemountainsoftware/cpputest-for-qpc/actions/workflows/cmake.yml/badge.svg)
+Build and Test status: ![Build and Tests](https://github.com/covemountainsoftware/video-tutorial-cpputest-for-qpc/actions/workflows/cmake.yml/badge.svg)
 
 Copyright Matthew Eshleman
 
