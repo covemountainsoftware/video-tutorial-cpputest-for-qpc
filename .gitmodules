@@ -1,0 +1,6 @@
+[submodule "externals/qpc"]
+	path = externals/qpc
+	url = git@github.com:QuantumLeaps/qpc.git
+[submodule "externals/cpputest-for-qpc"]
+	path = externals/cpputest-for-qpc
+	url = https://github.com/covemountainsoftware/cpputest-for-qpc.git
