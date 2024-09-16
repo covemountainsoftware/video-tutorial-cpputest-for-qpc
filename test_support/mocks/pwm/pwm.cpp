@@ -25,34 +25,31 @@ Copyright (c) <2019-2024> <Matthew Eshleman - https://covemountainsoftware.com>
 #include "pwm.h"
 #include "CppUTestExt/MockSupport.h"
 
-static constexpr const char* MOCK_NAME = "Pwm";
-
-
 bool PwmInit()
 {
-    mock(MOCK_NAME)
-      .actualCall("Init");
-    return mock(MOCK_NAME).returnBoolValueOrDefault(true);
+    mock()
+      .actualCall("PwmInit");
+    return mock().returnBoolValueOrDefault(true);
 }
 
 bool PwmOff()
 {
-    mock(MOCK_NAME)
-      .actualCall("Off");
-    return mock(MOCK_NAME).returnBoolValueOrDefault(true);
+    mock()
+      .actualCall("PwmOff");
+    return mock().returnBoolValueOrDefault(true);
 }
 
 bool PwmOn(float percent)
 {
-    mock(MOCK_NAME)
-      .actualCall("On")
+    mock()
+      .actualCall("PwmOn")
       .withParameter("percent", percent);
-    return mock(MOCK_NAME).returnBoolValueOrDefault(true);
+    return mock().returnBoolValueOrDefault(true);
 }
 
 uint16_t PwmFactoryTest()
 {
-    mock(MOCK_NAME)
-      .actualCall("FactoryTest");
-    return mock(MOCK_NAME).returnUnsignedIntValueOrDefault(0xFFFF);
+    mock()
+      .actualCall("PwmFactoryTest");
+    return mock().returnUnsignedIntValueOrDefault(0xFFFF);
 }
