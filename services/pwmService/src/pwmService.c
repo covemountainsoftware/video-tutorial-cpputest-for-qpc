@@ -15,7 +15,11 @@
 /// @endcond
 
 #include "pwmService.h"
+#include "pwm.h"
+#include "qsafe.h"
 #include <stddef.h>
+
+Q_DEFINE_THIS_MODULE("PwmService")
 
 typedef struct {
     QActive super; /* inherit QActive, via QP/C Framework C style */
@@ -42,6 +46,8 @@ void PwmService_dtor()
 static QState initial(PwmService * const me, void const * const par)
 {
     Q_UNUSED_PAR(par);
+    bool ok = PwmInit();
+    Q_ASSERT(true == ok);
     return Q_TRAN(&state_of_off);
 }
 
@@ -49,6 +55,12 @@ QState state_of_off(PwmService * me, const QEvt* e)
 {
     QState rtn;
     switch (e->sig) {
+        case Q_ENTRY_SIG: {
+            bool ok = PwmOff();
+            Q_ASSERT(true == ok);
+            rtn = Q_HANDLED();
+            break;
+        }
         default:
             rtn = Q_SUPER(&QHsm_top);
             break;

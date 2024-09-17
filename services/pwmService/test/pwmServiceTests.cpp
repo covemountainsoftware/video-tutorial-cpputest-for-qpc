@@ -28,6 +28,7 @@
 #include "cms_cpputest_qf_ctrl.hpp"
 #include "bspTicks.h"
 #include "pub_sub_signals.h"
+#include <array>
 
 // the cpputest headers must always be last
 #include "CppUTest/TestHarness.h"
@@ -38,6 +39,7 @@ Q_DEFINE_THIS_MODULE("pwmServiceTests")
 TEST_GROUP(PwmServiceTests)
 {
     QActive* mUnderTest         = nullptr;
+    std::array<const QEvt*, 10> underTestEventQueueStorage;
 
     void setup() final
     {
@@ -57,6 +59,8 @@ TEST_GROUP(PwmServiceTests)
         // under test in this manner.
         mUnderTest = g_thePwmService;
         CHECK_TRUE(mUnderTest != nullptr);
+
+        underTestEventQueueStorage.fill(nullptr);
     }
 
     void teardown() final
@@ -78,3 +82,36 @@ TEST(PwmServiceTests, given_init_when_created_then_does_not_crash)
     // setup() is automatically called by cpputest, which creates our
     // unit under test fully representing this trivial starting test.
 }
+
+TEST(PwmServiceTests, given_initialized_when_started_then_init_the_pwm_to_off)
+{
+    using namespace cms::test;
+    // Initialize the PWM to off
+
+    //mock: expect PWM Init
+    mock().expectOneCall("PwmInit").andReturnValue(true);
+    //mock: expect PWM off
+    mock().expectOneCall("PwmOff").andReturnValue(true);
+    //Start the AO under test
+
+    QACTIVE_START(mUnderTest, qf_ctrl::UNIT_UNDER_TEST_PRIORITY,
+                  underTestEventQueueStorage.data(), underTestEventQueueStorage.size(),
+                  nullptr, 0, nullptr);
+
+    //after doing anything with QF/QP, recommend giving it some processing time
+    qf_ctrl::ProcessEvents();
+
+    //mock: check expectations
+    mock().checkExpectations();
+
+    //ignore published event requirement at this time.
+}
+
+
+//  Subscribe to PWM On event (with percentage [ 0.0f … 1.0f ])
+//  Publish PWM Status when On is complete
+//  When On, the AO must refresh the PWM every 250 milliseconds.
+//Subscribe to PWM Off event
+//  Publish PWM Status when Off is complete
+//Receive via Post: Factory Test Request Event, process when Off, otherwise assert.
+//  Post back to requestor pass/fail and the uint16 device ID of the PWM
