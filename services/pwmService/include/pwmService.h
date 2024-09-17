@@ -23,6 +23,12 @@
 extern "C" {
 #endif
 
+typedef struct {
+    QEvt super; //inherit QEvt, QP/C Framework OOP C style
+
+    float percent;
+} PwmServiceOnRequestEvent;
+
 /**
  * opaque pointer to the active object, this pointer is
  * only valid after calling PwmService_ctor().

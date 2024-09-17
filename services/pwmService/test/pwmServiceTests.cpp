@@ -75,6 +75,30 @@ TEST_GROUP(PwmServiceTests)
         // Tear down (destroy) the cpputest-for-qpc environment
         cms::test::qf_ctrl::Teardown();
     }
+
+    void startServiceUnderTest()
+    {
+        using namespace cms::test;
+        // Initialize the PWM to off
+
+        //mock: expect PWM Init
+        mock().expectOneCall("PwmInit").andReturnValue(true);
+        //mock: expect PWM off
+        mock().expectOneCall("PwmOff").andReturnValue(true);
+        //Start the AO under test
+
+        QACTIVE_START(mUnderTest, qf_ctrl::UNIT_UNDER_TEST_PRIORITY,
+                      underTestEventQueueStorage.data(), underTestEventQueueStorage.size(),
+                      nullptr, 0, nullptr);
+
+        //after doing anything with QF/QP, recommend giving it some processing time
+        qf_ctrl::ProcessEvents();
+
+        //mock: check expectations
+        mock().checkExpectations();
+
+        //ignore published event requirement at this time.
+    }
 };
 
 TEST(PwmServiceTests, given_init_when_created_then_does_not_crash)
@@ -85,30 +109,33 @@ TEST(PwmServiceTests, given_init_when_created_then_does_not_crash)
 
 TEST(PwmServiceTests, given_initialized_when_started_then_init_the_pwm_to_off)
 {
-    using namespace cms::test;
-    // Initialize the PWM to off
-
-    //mock: expect PWM Init
-    mock().expectOneCall("PwmInit").andReturnValue(true);
-    //mock: expect PWM off
-    mock().expectOneCall("PwmOff").andReturnValue(true);
-    //Start the AO under test
-
-    QACTIVE_START(mUnderTest, qf_ctrl::UNIT_UNDER_TEST_PRIORITY,
-                  underTestEventQueueStorage.data(), underTestEventQueueStorage.size(),
-                  nullptr, 0, nullptr);
-
-    //after doing anything with QF/QP, recommend giving it some processing time
-    qf_ctrl::ProcessEvents();
-
-    //mock: check expectations
-    mock().checkExpectations();
-
-    //ignore published event requirement at this time.
+    //helper method fully tests this requirement
+    startServiceUnderTest();
 }
 
+TEST(PwmServiceTests, given_started_when_pwm_on_event_then_sets_the_pwm_to_expected_value)
+{
+    //  Subscribe to PWM On event (with percentage [ 0.0f … 1.0f ])
+    using namespace cms::test;
+    constexpr float TEST_PERCENT = 0.4f;
 
-//  Subscribe to PWM On event (with percentage [ 0.0f … 1.0f ])
+    startServiceUnderTest();
+    //service is now started.
+
+    //allocate event to publish, same as firmware would
+    auto e = Q_NEW(PwmServiceOnRequestEvent, PWM_REQUEST_ON_SIG);
+    e->percent = TEST_PERCENT;
+
+    //mock: expect pwm on call with expected percent value
+    mock().expectOneCall("PwmOn").withParameter("percent", TEST_PERCENT).andReturnValue(true);
+    //use helper method to publish and give processing time
+    qf_ctrl::PublishAndProcess(&e->super);
+
+    mock().checkExpectations();
+
+    //again, ignore the requirement to publish a status event for now
+}
+
 //  Publish PWM Status when On is complete
 //  When On, the AO must refresh the PWM every 250 milliseconds.
 //Subscribe to PWM Off event
