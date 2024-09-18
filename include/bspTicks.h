@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-static const uint32_t BSP_TICKS_PER_SECOND = 100;
+static const uint32_t BSP_TICKS_PER_SECOND = 1000;
 
 #ifdef __cplusplus
 }
