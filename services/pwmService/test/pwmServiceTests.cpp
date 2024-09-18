@@ -162,9 +162,20 @@ TEST(PwmServiceTests, given_on_when_every_250ms_then_refreshes_pwm_percent)
     mock().checkExpectations();
 }
 
+TEST(PwmServiceTests, given_on_when_off_req_is_published_then_pwm_is_off)
+{
+    using namespace cms::test;
+
+    constexpr float TEST_PERCENT = 0.55f;
+    startServiceAndPwmOn(TEST_PERCENT);
+
+    mock().expectOneCall("PwmOff").andReturnValue(true);
+    qf_ctrl::PublishAndProcess(PWM_REQUEST_OFF_SIG);
+    mock().checkExpectations();
+}
+
 
 //  Publish PWM Status when On is complete
-//Subscribe to PWM Off event
 //  Publish PWM Status when Off is complete
 //Receive via Post: Factory Test Request Event, process when Off, otherwise assert.
 //  Post back to requestor pass/fail and the uint16 device ID of the PWM

@@ -18,6 +18,7 @@ enum PubSubSignals {
     STARTING_PUB_SUB_SIG = Q_USER_SIG,
 
     PWM_REQUEST_ON_SIG,
+    PWM_REQUEST_OFF_SIG,
 
     // The last published signal enum value. Note:
     // active objects should start their internal

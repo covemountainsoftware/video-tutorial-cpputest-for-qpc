@@ -58,6 +58,7 @@ static QState initial(PwmService * const me, void const * const par)
 {
     Q_UNUSED_PAR(par);
     QActive_subscribe(&me->super, PWM_REQUEST_ON_SIG);
+    QActive_subscribe(&me->super, PWM_REQUEST_OFF_SIG);
     QTimeEvt_ctorX(&me->refresh_timer, &me->super, PWM_REFRESH_SIG, 0U);
     bool ok = PwmInit();
     Q_ASSERT(true == ok);
@@ -106,6 +107,10 @@ QState state_of_on(PwmService * me, const QEvt* e)
             rtn = Q_HANDLED();
             break;
         }
+
+        case PWM_REQUEST_OFF_SIG:
+            rtn = Q_TRAN(&state_of_off);
+            break;
 
         case PWM_REFRESH_SIG: {
             bool ok = PwmOn(me->current_percent);
