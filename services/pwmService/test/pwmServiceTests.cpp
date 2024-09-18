@@ -29,6 +29,9 @@
 #include "bspTicks.h"
 #include "pub_sub_signals.h"
 #include <array>
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 // the cpputest headers must always be last
 #include "CppUTest/TestHarness.h"
@@ -99,6 +102,28 @@ TEST_GROUP(PwmServiceTests)
 
         //ignore published event requirement at this time.
     }
+
+    void startServiceAndPwmOn(float percent)
+    {
+        //  Subscribe to PWM On event (with percentage [ 0.0f … 1.0f ])
+        using namespace cms::test;
+
+        startServiceUnderTest();
+        //service is now started.
+
+        //allocate event to publish, same as firmware would
+        auto e = Q_NEW(PwmServiceOnRequestEvent, PWM_REQUEST_ON_SIG);
+        e->percent = percent;
+
+        //mock: expect pwm on call with expected percent value
+        mock().expectOneCall("PwmOn").withParameter("percent", percent).andReturnValue(true);
+        //use helper method to publish and give processing time
+        qf_ctrl::PublishAndProcess(&e->super);
+
+        mock().checkExpectations();
+
+        //again, ignore the requirement to publish a status event for now
+    }
 };
 
 TEST(PwmServiceTests, given_init_when_created_then_does_not_crash)
@@ -115,29 +140,30 @@ TEST(PwmServiceTests, given_initialized_when_started_then_init_the_pwm_to_off)
 
 TEST(PwmServiceTests, given_started_when_pwm_on_event_then_sets_the_pwm_to_expected_value)
 {
-    //  Subscribe to PWM On event (with percentage [ 0.0f … 1.0f ])
-    using namespace cms::test;
     constexpr float TEST_PERCENT = 0.4f;
-
-    startServiceUnderTest();
-    //service is now started.
-
-    //allocate event to publish, same as firmware would
-    auto e = Q_NEW(PwmServiceOnRequestEvent, PWM_REQUEST_ON_SIG);
-    e->percent = TEST_PERCENT;
-
-    //mock: expect pwm on call with expected percent value
-    mock().expectOneCall("PwmOn").withParameter("percent", TEST_PERCENT).andReturnValue(true);
-    //use helper method to publish and give processing time
-    qf_ctrl::PublishAndProcess(&e->super);
-
-    mock().checkExpectations();
-
-    //again, ignore the requirement to publish a status event for now
+    startServiceAndPwmOn(TEST_PERCENT);
 }
 
-//  Publish PWM Status when On is complete
 //  When On, the AO must refresh the PWM every 250 milliseconds.
+TEST(PwmServiceTests, given_on_when_every_250ms_then_refreshes_pwm_percent)
+{
+    using namespace cms::test;
+
+    constexpr float TEST_PERCENT = 0.55f;
+    startServiceAndPwmOn(TEST_PERCENT);
+
+    mock().clear();
+    mock().expectOneCall("PwmOn").withParameter("percent", TEST_PERCENT).andReturnValue(true);
+    qf_ctrl::MoveTimeForward(250ms);
+    mock().checkExpectations();
+
+    mock().expectOneCall("PwmOn").withParameter("percent", TEST_PERCENT).andReturnValue(true);
+    qf_ctrl::MoveTimeForward(250ms);
+    mock().checkExpectations();
+}
+
+
+//  Publish PWM Status when On is complete
 //Subscribe to PWM Off event
 //  Publish PWM Status when Off is complete
 //Receive via Post: Factory Test Request Event, process when Off, otherwise assert.

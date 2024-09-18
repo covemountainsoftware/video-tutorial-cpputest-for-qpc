@@ -18,6 +18,7 @@
 #include "pwm.h"
 #include "qsafe.h"
 #include "pub_sub_signals.h"
+#include "bspTicks.h"
 #include <stddef.h>
 
 Q_DEFINE_THIS_MODULE("PwmService")
@@ -25,7 +26,14 @@ Q_DEFINE_THIS_MODULE("PwmService")
 typedef struct {
     QActive super; /* inherit QActive, via QP/C Framework C style */
     float current_percent;
+    QTimeEvt refresh_timer;
 } PwmService;
+
+enum InternalSignals {
+    PWM_REFRESH_SIG = MAX_PUB_SUB_SIG + 1
+};
+
+static const uint32_t TICKS_PER_REFRESH = BSP_TICKS_PER_SECOND / 4;
 
 //internal state handlers.
 static QState initial(PwmService * me, void const * par);
@@ -50,6 +58,7 @@ static QState initial(PwmService * const me, void const * const par)
 {
     Q_UNUSED_PAR(par);
     QActive_subscribe(&me->super, PWM_REQUEST_ON_SIG);
+    QTimeEvt_ctorX(&me->refresh_timer, &me->super, PWM_REFRESH_SIG, 0U);
     bool ok = PwmInit();
     Q_ASSERT(true == ok);
     return Q_TRAN(&state_of_off);
@@ -86,6 +95,19 @@ QState state_of_on(PwmService * me, const QEvt* e)
     QState rtn;
     switch (e->sig) {
         case Q_ENTRY_SIG: {
+            QTimeEvt_armX(&me->refresh_timer, TICKS_PER_REFRESH, TICKS_PER_REFRESH);
+            bool ok = PwmOn(me->current_percent);
+            Q_ASSERT(true == ok);
+            rtn = Q_HANDLED();
+            break;
+        }
+        case Q_EXIT_SIG: {
+            QTimeEvt_disarm(&me->refresh_timer);
+            rtn = Q_HANDLED();
+            break;
+        }
+
+        case PWM_REFRESH_SIG: {
             bool ok = PwmOn(me->current_percent);
             Q_ASSERT(true == ok);
             rtn = Q_HANDLED();
