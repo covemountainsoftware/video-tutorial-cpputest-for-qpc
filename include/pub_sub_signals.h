@@ -20,6 +20,9 @@ enum PubSubSignals {
     PWM_REQUEST_ON_SIG,
     PWM_REQUEST_OFF_SIG,
 
+    PWM_IS_OFF_SIG,
+    PWM_IS_ON_SIG,
+
     // The last published signal enum value. Note:
     // active objects should start their internal
     // private signal enums values after this value.

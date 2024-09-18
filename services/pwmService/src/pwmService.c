@@ -67,11 +67,14 @@ static QState initial(PwmService * const me, void const * const par)
 
 QState state_of_off(PwmService * me, const QEvt* e)
 {
+    static const QEvt OffStatusEvent = QEVT_INITIALIZER(PWM_IS_OFF_SIG);
+
     QState rtn;
     switch (e->sig) {
         case Q_ENTRY_SIG: {
             bool ok = PwmOff();
             Q_ASSERT(true == ok);
+            QF_PUBLISH(&OffStatusEvent, &me->super);
             rtn = Q_HANDLED();
             break;
         }
@@ -93,12 +96,15 @@ QState state_of_off(PwmService * me, const QEvt* e)
 
 QState state_of_on(PwmService * me, const QEvt* e)
 {
+    static const QEvt OnStatusEvent = QEVT_INITIALIZER(PWM_IS_ON_SIG);
+
     QState rtn;
     switch (e->sig) {
         case Q_ENTRY_SIG: {
             QTimeEvt_armX(&me->refresh_timer, TICKS_PER_REFRESH, TICKS_PER_REFRESH);
             bool ok = PwmOn(me->current_percent);
             Q_ASSERT(true == ok);
+            QF_PUBLISH(&OnStatusEvent, &me->super);
             rtn = Q_HANDLED();
             break;
         }

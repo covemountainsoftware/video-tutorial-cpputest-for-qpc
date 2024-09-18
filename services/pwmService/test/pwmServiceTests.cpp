@@ -26,6 +26,7 @@
 #include "qpc.h"
 #include "pwmService.h"
 #include "cms_cpputest_qf_ctrl.hpp"
+#include "cmsTestPublishedEventRecorder.hpp"
 #include "bspTicks.h"
 #include "pub_sub_signals.h"
 #include <array>
@@ -43,11 +44,19 @@ TEST_GROUP(PwmServiceTests)
 {
     QActive* mUnderTest         = nullptr;
     std::array<const QEvt*, 10> underTestEventQueueStorage;
+    cms::test::PublishedEventRecorder* mRecorder;
 
     void setup() final
     {
+        using namespace cms::test;
+
         // Setup and create the cpputest-for-qpc environment
-        cms::test::qf_ctrl::Setup(MAX_PUB_SUB_SIG, BSP_TICKS_PER_SECOND);
+        qf_ctrl::Setup(MAX_PUB_SUB_SIG, BSP_TICKS_PER_SECOND);
+
+        mRecorder = PublishedEventRecorder::CreatePublishedEventRecorder(
+          qf_ctrl::RECORDER_PRIORITY,
+          Q_USER_SIG,
+          MAX_PUB_SUB_SIG);
 
         // Confirm that the PwmService instance is currently null,
         // enforcing a clean setup()
@@ -77,6 +86,8 @@ TEST_GROUP(PwmServiceTests)
 
         // Tear down (destroy) the cpputest-for-qpc environment
         cms::test::qf_ctrl::Teardown();
+
+        delete mRecorder;
     }
 
     void startServiceUnderTest()
@@ -100,7 +111,10 @@ TEST_GROUP(PwmServiceTests)
         //mock: check expectations
         mock().checkExpectations();
 
-        //ignore published event requirement at this time.
+        //confirm that the service published the off status
+        auto event = mRecorder->getRecordedEvent();
+        CHECK_TRUE(event != nullptr);
+        CHECK_EQUAL(PWM_IS_OFF_SIG, event->sig);
     }
 
     void startServiceAndPwmOn(float percent)
@@ -118,11 +132,13 @@ TEST_GROUP(PwmServiceTests)
         //mock: expect pwm on call with expected percent value
         mock().expectOneCall("PwmOn").withParameter("percent", percent).andReturnValue(true);
         //use helper method to publish and give processing time
-        qf_ctrl::PublishAndProcess(&e->super);
+        qf_ctrl::PublishAndProcess(&e->super, mRecorder);
 
         mock().checkExpectations();
 
-        //again, ignore the requirement to publish a status event for now
+        auto onStatusEvent = mRecorder->getRecordedEvent();
+        CHECK_TRUE(onStatusEvent != nullptr);
+        CHECK_EQUAL(PWM_IS_ON_SIG, onStatusEvent->sig);
     }
 };
 
@@ -170,12 +186,15 @@ TEST(PwmServiceTests, given_on_when_off_req_is_published_then_pwm_is_off)
     startServiceAndPwmOn(TEST_PERCENT);
 
     mock().expectOneCall("PwmOff").andReturnValue(true);
-    qf_ctrl::PublishAndProcess(PWM_REQUEST_OFF_SIG);
+    qf_ctrl::PublishAndProcess(PWM_REQUEST_OFF_SIG, mRecorder);
     mock().checkExpectations();
+
+    auto offStatusEvent = mRecorder->getRecordedEvent();
+    CHECK_TRUE(offStatusEvent != nullptr);
+    CHECK_EQUAL(PWM_IS_OFF_SIG, offStatusEvent->sig);
 }
 
-
 //  Publish PWM Status when On is complete
-//  Publish PWM Status when Off is complete
+
 //Receive via Post: Factory Test Request Event, process when Off, otherwise assert.
 //  Post back to requestor pass/fail and the uint16 device ID of the PWM
