@@ -25,6 +25,8 @@ Q_DEFINE_THIS_MODULE("PwmService")
 
 typedef struct {
     QActive super; /* inherit QActive, via QP/C Framework C style */
+
+    //member variables of PwmService
     float current_percent;
     QTimeEvt refresh_timer;
 } PwmService;
@@ -51,6 +53,7 @@ void PwmService_ctor()
 
 void PwmService_dtor()
 {
+    QTimeEvt_disarm(&m_instance.refresh_timer);
     g_thePwmService = NULL;
 }
 
@@ -68,8 +71,8 @@ static QState initial(PwmService * const me, void const * const par)
 QState state_of_off(PwmService * me, const QEvt* e)
 {
     static const QEvt OffStatusEvent = QEVT_INITIALIZER(PWM_IS_OFF_SIG);
-
     QState rtn;
+
     switch (e->sig) {
         case Q_ENTRY_SIG: {
             bool ok = PwmOff();
@@ -93,12 +96,11 @@ QState state_of_off(PwmService * me, const QEvt* e)
     return rtn;
 }
 
-
 QState state_of_on(PwmService * me, const QEvt* e)
 {
     static const QEvt OnStatusEvent = QEVT_INITIALIZER(PWM_IS_ON_SIG);
-
     QState rtn;
+
     switch (e->sig) {
         case Q_ENTRY_SIG: {
             QTimeEvt_armX(&me->refresh_timer, TICKS_PER_REFRESH, TICKS_PER_REFRESH);
