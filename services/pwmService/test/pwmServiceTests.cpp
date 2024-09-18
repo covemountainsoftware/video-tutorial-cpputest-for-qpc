@@ -5,7 +5,7 @@
 /// @cond
 ///***************************************************************************
 ///
-/// Copyright (C) 2022 Matthew Eshleman. All rights reserved.
+/// Copyright (C) 2024 Matthew Eshleman. All rights reserved.
 ///
 /// This program is open source software: you can redistribute it and/or
 /// modify it under the terms of the GNU General Public License as published
@@ -32,19 +32,19 @@
 #include <array>
 #include <chrono>
 
-using namespace std::chrono_literals;
-
 // the cpputest headers must always be last
 #include "CppUTest/TestHarness.h"
 #include "CppUTestExt/MockSupport.h"
 
 Q_DEFINE_THIS_MODULE("pwmServiceTests")
 
+using namespace std::chrono_literals;
+
 TEST_GROUP(PwmServiceTests)
 {
     QActive* mUnderTest         = nullptr;
     std::array<const QEvt*, 10> underTestEventQueueStorage;
-    cms::test::PublishedEventRecorder* mRecorder;
+    cms::test::PublishedEventRecorder* mRecorder = nullptr;
 
     void setup() final
     {
@@ -157,6 +157,8 @@ TEST(PwmServiceTests, given_initialized_when_started_then_init_the_pwm_to_off)
 TEST(PwmServiceTests, given_started_when_pwm_on_event_then_sets_the_pwm_to_expected_value)
 {
     constexpr float TEST_PERCENT = 0.4f;
+
+    //helper method fully tests this requirement
     startServiceAndPwmOn(TEST_PERCENT);
 }
 
@@ -173,6 +175,7 @@ TEST(PwmServiceTests, given_on_when_every_250ms_then_refreshes_pwm_percent)
     qf_ctrl::MoveTimeForward(250ms);
     mock().checkExpectations();
 
+    //one more time period to confirm that the behavior repeats
     mock().expectOneCall("PwmOn").withParameter("percent", TEST_PERCENT).andReturnValue(true);
     qf_ctrl::MoveTimeForward(250ms);
     mock().checkExpectations();
@@ -194,7 +197,5 @@ TEST(PwmServiceTests, given_on_when_off_req_is_published_then_pwm_is_off)
     CHECK_EQUAL(PWM_IS_OFF_SIG, offStatusEvent->sig);
 }
 
-//  Publish PWM Status when On is complete
-
 //Receive via Post: Factory Test Request Event, process when Off, otherwise assert.
-//  Post back to requestor pass/fail and the uint16 device ID of the PWM
+//  Post back to requester pass/fail and the uint16 device ID of the PWM
