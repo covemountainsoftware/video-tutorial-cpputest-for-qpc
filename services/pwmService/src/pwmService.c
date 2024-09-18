@@ -32,7 +32,7 @@ typedef struct {
 } PwmService;
 
 enum InternalSignals {
-    PWM_REFRESH_SIG = MAX_PUB_SUB_SIG + 1
+    PWM_REFRESH_SIG = MAX_PWM_POSTED_SIGNALS
 };
 
 static const uint32_t TICKS_PER_REFRESH = BSP_TICKS_PER_SECOND / 4;
@@ -85,6 +85,21 @@ QState state_of_off(PwmService * me, const QEvt* e)
             const PwmServiceOnRequestEvent* event = (const PwmServiceOnRequestEvent*)e;
             me->current_percent = event->percent;
             rtn = Q_TRAN(&state_of_on);
+            break;
+        }
+
+        case PWM_REQUEST_FACTORY_TEST_SIG:{
+            const PwmServiceFactoryTestRequestEvent * event = (const PwmServiceFactoryTestRequestEvent*)e;
+            uint16_t id = PwmFactoryTest();
+
+            PwmServiceFactoryTestResponseEvent * response = Q_NEW(PwmServiceFactoryTestResponseEvent, event->response_sig);
+            response->test_passed = id != 0xFFFF; //should refactor to eliminate magic number
+            response->device_id = id;
+
+            //post the response to the requester
+            QACTIVE_POST(event->requester, &response->super, 0);
+
+            rtn = Q_HANDLED();
             break;
         }
 

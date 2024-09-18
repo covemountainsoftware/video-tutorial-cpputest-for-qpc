@@ -18,6 +18,7 @@
 #define PWM_SERVICE_H
 
 #include "qpc.h"
+#include "pub_sub_signals.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,6 +29,27 @@ typedef struct {
 
     float percent;
 } PwmServiceOnRequestEvent;
+
+
+typedef struct {
+    QEvt super; //inherit QEvt, QP/C Framework OOP C style
+
+    QActive* requester;
+    QSignal  response_sig;
+} PwmServiceFactoryTestRequestEvent;
+
+typedef struct {
+    QEvt super; //inherit QEvt, QP/C Framework OOP C style
+
+    bool test_passed;
+    uint16_t device_id;
+} PwmServiceFactoryTestResponseEvent;
+
+
+enum PostedSignals {
+    PWM_REQUEST_FACTORY_TEST_SIG = MAX_PUB_SUB_SIG + 1,
+    MAX_PWM_POSTED_SIGNALS
+};
 
 /**
  * opaque pointer to the active object, this pointer is

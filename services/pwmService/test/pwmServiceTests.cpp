@@ -197,5 +197,44 @@ TEST(PwmServiceTests, given_on_when_off_req_is_published_then_pwm_is_off)
     CHECK_EQUAL(PWM_IS_OFF_SIG, offStatusEvent->sig);
 }
 
+TEST(PwmServiceTests, given_off_when_factory_test_request_is_posted_then_pwm_factory_test_is_executed_and_results_are_posted_back)
+{
+    const uint16_t EXPECTED_DEVICE_ID = 0x1234;
+
+    using namespace cms::test;
+
+    startServiceUnderTest();   // will be in off state
+
+    //need a dummy AO to represent the requester
+
+    auto dummy = std::unique_ptr<cms::DefaultDummyActiveObject>(
+      new cms::DefaultDummyActiveObject(
+        cms::DefaultDummyActiveObject::EventBehavior::RECORDER));
+
+    //must start the dummy, as it is an active object too
+    dummy->dummyStart(qf_ctrl::UNIT_UNDER_TEST_PRIORITY - 1);
+
+    //we need to post the request
+    auto e = Q_NEW(PwmServiceFactoryTestRequestEvent, PWM_REQUEST_FACTORY_TEST_SIG);
+
+    e->requester = dummy->getQActive();
+    e->response_sig = MAX_PUB_SUB_SIG + 1000; //ensure well outside pub sub range
+
+    //about to post, we expect the pwm factory test to be executed
+    mock().expectOneCall("PwmFactoryTest").andReturnValue(EXPECTED_DEVICE_ID);
+    QACTIVE_POST(mUnderTest, &e->super, nullptr);
+    qf_ctrl::ProcessEvents();
+    mock().checkExpectations();
+
+    //expect a response recorded by the dummy AO
+    auto recordedEvent = dummy->getRecordedEvent();
+    CHECK_TRUE(recordedEvent != nullptr);
+    CHECK_EQUAL(e->response_sig, recordedEvent->sig);
+
+    //now cast to the exact expected event data type
+    auto responseEvent = (const PwmServiceFactoryTestResponseEvent*)(recordedEvent.get());
+    CHECK_EQUAL(EXPECTED_DEVICE_ID, responseEvent->device_id);
+    CHECK_TRUE(responseEvent->test_passed);
+}
 //Receive via Post: Factory Test Request Event, process when Off, otherwise assert.
 //  Post back to requester pass/fail and the uint16 device ID of the PWM
