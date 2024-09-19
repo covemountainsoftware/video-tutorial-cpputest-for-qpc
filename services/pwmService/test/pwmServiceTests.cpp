@@ -27,6 +27,7 @@
 #include "pwmService.h"
 #include "cms_cpputest_qf_ctrl.hpp"
 #include "cmsTestPublishedEventRecorder.hpp"
+#include "qassertMockSupport.hpp"
 #include "bspTicks.h"
 #include "pub_sub_signals.h"
 #include <array>
@@ -236,5 +237,25 @@ TEST(PwmServiceTests, given_off_when_factory_test_request_is_posted_then_pwm_fac
     CHECK_EQUAL(EXPECTED_DEVICE_ID, responseEvent->device_id);
     CHECK_TRUE(responseEvent->test_passed);
 }
-//Receive via Post: Factory Test Request Event, process when Off, otherwise assert.
-//  Post back to requester pass/fail and the uint16 device ID of the PWM
+
+TEST(PwmServiceTests, given_on_when_factory_test_requested_then_assert)
+{
+    using namespace cms::test;
+
+    //because the assert being tested will interrupt processing, the framework
+    //will detect a memory pool leak. In this test we do not care, so ignore
+    //memory pool leak checking for this test only.
+    qf_ctrl::ChangeMemPoolTeardownOption(qf_ctrl::MemPoolTeardownOption::IGNORE);
+
+    constexpr float TEST_PERCENT = 0.55f;
+    startServiceAndPwmOn(TEST_PERCENT);
+
+    auto e = Q_NEW(PwmServiceFactoryTestRequestEvent, PWM_REQUEST_FACTORY_TEST_SIG);
+    e->requester = mUnderTest; //don't care for this test
+    e->response_sig = MAX_PUB_SUB_SIG + 1000; //don't care for this test
+
+    MockExpectQAssert();
+    QACTIVE_POST(mUnderTest, &e->super, nullptr);
+    qf_ctrl::ProcessEvents();
+    mock().checkExpectations();
+}

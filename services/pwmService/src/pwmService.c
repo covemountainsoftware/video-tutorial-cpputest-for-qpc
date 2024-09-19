@@ -141,6 +141,11 @@ QState state_of_on(PwmService * me, const QEvt* e)
             rtn = Q_HANDLED();
             break;
         }
+        case PWM_REQUEST_FACTORY_TEST_SIG:
+            //factory test is not supported when PWM is on
+            Q_ASSERT(true == false);
+            rtn = Q_HANDLED();
+            break;
 
         default:
             rtn = Q_SUPER(&QHsm_top);
