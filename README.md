@@ -13,7 +13,7 @@ encourage and support efforts like this. Thank you!
 # Introduction
 
 This project is paired with a video tutorial. Check out the video
-here: <TODO: link to video when available>
+here: https://www.youtube.com/watch?v=hr1qkNH1wSA
 
 # Environment
 
